@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dropzone</title>
+    <style>
+        .dropzone {
+            border: 3px dashed #ccc;
+            padding: 50px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .dropzone.active {
+            border-color: blue;
+            background: #eef;
+        }
+    </style>
+</head>
+<body>
+    <div id="dropzone" class="dropzone">
+        <input type="file" id="fileInput" accept="video/*" style="display:none">
+        <p>Arrastra un video aquí o haz clic para seleccionar</p>
+    </div>
+
+    <script>
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropzone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            console.log('File selected:', file);
+            alert('Archivo: ' + file.name);
+        });
+
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('active');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('active');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('active');
+            const file = e.dataTransfer.files[0];
+            console.log('File dropped:', file);
+            alert('Archivo: ' + file.name);
+        });
+    </script>
+</body>
+</html>

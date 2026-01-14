@@ -1,0 +1,57 @@
+.video-uploader {
+  width: 100%;
+}
+
+.dropzone {
+  border: 3px dashed #cbd5e0;
+  border-radius: 12px;
+  padding: 3rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #f7fafc;
+}
+
+.dropzone:hover:not(.disabled) {
+  border-color: #667eea;
+  background: #edf2f7;
+}
+
+.dropzone.active {
+  border-color: #667eea;
+  background: #e6f2ff;
+  transform: scale(1.02);
+}
+
+.dropzone.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #e2e8f0;
+}
+
+.dropzone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.upload-icon {
+  width: 64px;
+  height: 64px;
+  color: #667eea;
+  margin-bottom: 1rem;
+}
+
+.dropzone-text {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin: 0;
+}
+
+.dropzone-hint {
+  font-size: 0.875rem;
+  color: #718096;
+  margin: 0;
+}

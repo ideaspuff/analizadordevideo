@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico FFmpeg.wasm</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .test {
+            background: #f7fafc;
+            border-left: 4px solid #4299e1;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .pass { border-color: #48bb78; }
+        .fail { border-color: #f56565; }
+        .label { font-weight: bold; }
+        .value { color: #4a5568; }
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Diagnóstico FFmpeg.wasm</h1>
+    <div id="results"></div>
+
+    <script type="module">
+        const results = document.getElementById('results');
+
+        function addTest(name, passed, details) {
+            const div = document.createElement('div');
+            div.className = `test ${passed ? 'pass' : 'fail'}`;
+            div.innerHTML = `
+                <div class="label">${passed ? '✓' : '✗'} ${name}</div>
+                <div class="value">${details}</div>
+            `;
+            results.appendChild(div);
+        }
+
+        // Test 1: Secure Context
+        const isSecure = window.isSecureContext;
+        addTest('Secure Context', isSecure,
+            isSecure ? 'La página está en un contexto seguro (HTTPS o localhost)' :
+            'FALLO: Se requiere HTTPS o localhost');
+
+        // Test 2: Cross-Origin Isolation
+        const isCrossOriginIsolated = window.crossOriginIsolated;
+        addTest('Cross-Origin Isolation', isCrossOriginIsolated,
+            isCrossOriginIsolated ? 'Headers COOP/COEP configurados correctamente' :
+            'FALLO: Headers COOP/COEP no están configurados. Revisa vite.config.js');
+
+        // Test 3: SharedArrayBuffer
+        const hasSharedArrayBuffer = typeof SharedArrayBuffer !== 'undefined';
+        addTest('SharedArrayBuffer', hasSharedArrayBuffer,
+            hasSharedArrayBuffer ? 'SharedArrayBuffer está disponible' :
+            'FALLO: SharedArrayBuffer no disponible (requiere Cross-Origin Isolation)');
+
+        // Test 4: WebAssembly
+        const hasWebAssembly = typeof WebAssembly !== 'undefined';
+        addTest('WebAssembly', hasWebAssembly,
+            hasWebAssembly ? 'WebAssembly está soportado' :
+            'FALLO: WebAssembly no está soportado en este navegador');
+
+        // Test 5: Intentar cargar FFmpeg
+        addTest('Intentando cargar FFmpeg.wasm...', true, 'Iniciando...');
+
+        (async () => {
+            try {
+                const { FFmpeg } = await import('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js');
+                const { toBlobURL } = await import('https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js');
+
+                addTest('Módulos FFmpeg importados', true, 'FFmpeg y util cargados correctamente');
+
+                const ffmpeg = new FFmpeg();
+                const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+
+                ffmpeg.on('log', ({ message }) => {
+                    console.log('[FFmpeg]:', message);
+                });
+
+                const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
+                const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
+
+                addTest('Archivos descargados', true, 'ffmpeg-core.js y wasm descargados');
+
+                await ffmpeg.load({ coreURL, wasmURL });
+
+                addTest('FFmpeg.wasm cargado', true, '¡FFmpeg.wasm funciona correctamente!');
+
+                const successDiv = document.createElement('div');
+                successDiv.className = 'test pass';
+                successDiv.innerHTML = `
+                    <div class="label">🎉 ÉXITO TOTAL</div>
+                    <div class="value">FFmpeg.wasm está completamente funcional en este navegador.</div>
+                `;
+                results.appendChild(successDiv);
+
+            } catch (error) {
+                addTest('FFmpeg.wasm cargado', false,
+                    `Error: ${error.message}\n\nStack:\n${error.stack}`);
+
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'test fail';
+                errorDiv.innerHTML = `
+                    <div class="label">Información del Error</div>
+                    <pre>${JSON.stringify({
+                        message: error.message,
+                        stack: error.stack,
+                        isSecureContext: window.isSecureContext,
+                        crossOriginIsolated: window.crossOriginIsolated,
+                        userAgent: navigator.userAgent
+                    }, null, 2)}</pre>
+                `;
+                results.appendChild(errorDiv);
+            }
+        })();
+    </script>
+</body>
+</html>
