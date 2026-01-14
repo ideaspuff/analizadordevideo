@@ -127,59 +127,61 @@ export const extractAudioFromVideo = async (videoFile) => {
 };
 
 /**
- * Extrae audio de forma alternativa usando Web Audio API
+ * Extrae audio usando Web Audio API
  * @param {File} videoFile - Archivo de video
- * @returns {Promise<Float32Array>} Datos de audio en formato Float32Array
+ * @returns {Promise<Float32Array>} Datos de audio en formato Float32Array a 16kHz
  */
 export const extractAudioData = async (videoFile) => {
   console.log('[AudioTranscriber] Extrayendo datos de audio...');
 
-  return new Promise((resolve, reject) => {
-    const video = document.createElement('video');
-    const audioContext = new AudioContext({ sampleRate: 16000 });
+  try {
+    // Leer el archivo como ArrayBuffer
+    const arrayBuffer = await videoFile.arrayBuffer();
 
-    video.onloadedmetadata = () => {
-      video.currentTime = 0;
-    };
+    // Decodificar el audio
+    const audioContext = new AudioContext();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-    video.onseeked = async () => {
-      try {
-        // Crear un canvas offline para procesar el audio
-        const offlineCtx = new OfflineAudioContext(
-          1, // mono
-          Math.floor(video.duration * 16000),
-          16000
-        );
+    console.log('[AudioTranscriber] Audio decodificado:', {
+      duration: audioBuffer.duration,
+      sampleRate: audioBuffer.sampleRate,
+      channels: audioBuffer.numberOfChannels
+    });
 
-        // Crear source desde el video
-        const source = offlineCtx.createMediaElementSource(video);
-        source.connect(offlineCtx.destination);
+    // Crear un OfflineAudioContext para resamplear a 16kHz
+    const targetSampleRate = 16000;
+    const offlineContext = new OfflineAudioContext(
+      1, // mono
+      Math.floor(audioBuffer.duration * targetSampleRate),
+      targetSampleRate
+    );
 
-        video.play();
-        const audioBuffer = await offlineCtx.startRendering();
+    // Crear buffer source
+    const source = offlineContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(offlineContext.destination);
+    source.start(0);
 
-        // Obtener datos del canal 0 (mono)
-        const audioData = audioBuffer.getChannelData(0);
+    // Renderizar audio resampleado
+    const resampledBuffer = await offlineContext.startRendering();
 
-        URL.revokeObjectURL(video.src);
-        audioContext.close();
-        resolve(audioData);
+    // Obtener datos en Float32Array (mono)
+    const audioData = resampledBuffer.getChannelData(0);
 
-      } catch (error) {
-        URL.revokeObjectURL(video.src);
-        audioContext.close();
-        reject(error);
-      }
-    };
+    console.log('[AudioTranscriber] Audio extraído:', {
+      samples: audioData.length,
+      duration: audioData.length / targetSampleRate
+    });
 
-    video.onerror = () => {
-      URL.revokeObjectURL(video.src);
-      audioContext.close();
-      reject(new Error('Error al cargar el video'));
-    };
+    // Cerrar contextos
+    await audioContext.close();
 
-    video.src = URL.createObjectURL(videoFile);
-  });
+    return audioData;
+
+  } catch (error) {
+    console.error('[AudioTranscriber] Error extrayendo audio:', error);
+    throw new Error(`Error al extraer audio del video: ${error.message}`);
+  }
 };
 
 /**
@@ -224,25 +226,16 @@ export const transcribeAudio = async (audioData, modelUrl, options = {}) => {
 
   console.log('[AudioTranscriber] Iniciando transcripción...');
   console.log('[AudioTranscriber] Idioma:', language);
+  console.log('[AudioTranscriber] Audio length:', audioData.length);
 
   try {
-    // Resamplear audio a 16kHz si es necesario
-    const resampledAudio = await resampleTo16Khz({
-      audioData,
-      sampleRate: 16000, // Ya está en 16kHz
-      onProgress: (progress) => {
-        const percentage = Math.round(progress * 50); // 0-50%
-        onProgress?.(percentage);
-      }
-    });
-
-    // Transcribir
+    // Transcribir directamente (el audio ya está en 16kHz mono)
     const result = await transcribe({
       modelUrl,
-      audioData: resampledAudio,
+      audioData,
       language: language === 'auto' ? undefined : language,
       onProgress: (progress) => {
-        const percentage = 50 + Math.round(progress * 50); // 50-100%
+        const percentage = Math.round(progress * 100);
         onProgress?.(percentage);
       }
     });
