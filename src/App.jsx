@@ -5,6 +5,7 @@ import VideoPlayer from './components/VideoPlayer/VideoPlayer';
 import ScreenshotConfig from './components/ScreenshotConfig/ScreenshotConfig';
 import ProcessingEngine from './components/ProcessingEngine/ProcessingEngine';
 import ScreenshotGallery from './components/ScreenshotGallery/ScreenshotGallery';
+import TranscriptionTab from './components/TranscriptionTab/TranscriptionTab';
 import ErrorDashboard from './components/ErrorDashboard/ErrorDashboard';
 import { cleanupUrls } from './utils/downloadHelpers';
 import './App.css';
@@ -16,6 +17,7 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
   const [processingConfig, setProcessingConfig] = useState({});
+  const [activeTab, setActiveTab] = useState('screenshots'); // 'screenshots' o 'transcription'
   const processingEngineRef = useRef(null);
 
   const isSupported = isVideoFrameSupported();
@@ -131,30 +133,69 @@ function App() {
               onVideoInfoLoaded={handleVideoInfoLoaded}
             />
 
+            {/* Sistema de Tabs */}
             {videoInfo && (
-              <ScreenshotConfig
-                videoDuration={videoInfo.duration}
-                videoFileSize={videoFile?.size}
-                onStartProcessing={handleStartProcessing}
-                isProcessing={isProcessing}
-              />
-            )}
+              <div className="tabs-container card">
+                <div className="tabs-header">
+                  <button
+                    className={`tab-button ${activeTab === 'screenshots' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('screenshots')}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                      <circle cx="6" cy="6" r="1.5" fill="currentColor"/>
+                      <path d="M14 10L11 7L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Capturas de Pantalla
+                  </button>
+                  <button
+                    className={`tab-button ${activeTab === 'transcription' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('transcription')}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M8 1a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke="currentColor" strokeWidth="1.5"/>
+                      <path d="M13 8a5 5 0 0 1-10 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <line x1="8" y1="12" x2="8" y2="15" stroke="currentColor" strokeWidth="1.5"/>
+                      <line x1="5" y1="15" x2="11" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                    Transcripción de Audio
+                  </button>
+                </div>
 
-            {videoInfo && (
-              <ProcessingEngine
-                ref={processingEngineRef}
-                videoFile={videoFile}
-                config={processingConfig}
-                onComplete={handleProcessingComplete}
-                onError={handleProcessingError}
-              />
-            )}
+                <div className="tabs-content">
+                  {activeTab === 'screenshots' && (
+                    <div className="tab-panel">
+                      <ScreenshotConfig
+                        videoDuration={videoInfo.duration}
+                        videoFileSize={videoFile?.size}
+                        onStartProcessing={handleStartProcessing}
+                        isProcessing={isProcessing}
+                      />
 
-            {screenshots.length > 0 && (
-              <ScreenshotGallery
-                screenshots={screenshots}
-                onClear={handleClearScreenshots}
-              />
+                      <ProcessingEngine
+                        ref={processingEngineRef}
+                        videoFile={videoFile}
+                        config={processingConfig}
+                        onComplete={handleProcessingComplete}
+                        onError={handleProcessingError}
+                      />
+
+                      {screenshots.length > 0 && (
+                        <ScreenshotGallery
+                          screenshots={screenshots}
+                          onClear={handleClearScreenshots}
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === 'transcription' && (
+                    <div className="tab-panel">
+                      <TranscriptionTab videoFile={videoFile} />
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </>
         )}

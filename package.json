@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@remotion/whisper-web": "^4.0.405",
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",
     "react": "^18.3.1",
