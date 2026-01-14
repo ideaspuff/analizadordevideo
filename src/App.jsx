@@ -105,6 +105,27 @@ function App() {
           />
         ) : (
           <>
+            <div className="video-header-actions">
+              <div className="privacy-badge">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 1L3 3V7C3 10.5 5.5 13.5 8 14.5C10.5 13.5 13 10.5 13 7V3L8 1Z" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                  <path d="M6 8L7.5 9.5L10 6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                <span>100% Local - Procesamiento Privado</span>
+                <div className="privacy-tooltip">
+                  Tu video se procesa completamente en tu navegador.
+                  Nada se sube a servidores externos.
+                </div>
+              </div>
+              <button onClick={handleReset} className="btn-change-video">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 8C3 5.24 5.24 3 8 3C9.66 3 11.1 3.83 12 5.09M13 8C13 10.76 10.76 13 8 13C6.34 13 4.9 12.17 4 10.91" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  <path d="M12 2V5H9M4 14V11H7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                Cambiar Video
+              </button>
+            </div>
+
             <VideoPlayer
               videoFile={videoFile}
               onVideoInfoLoaded={handleVideoInfoLoaded}
@@ -113,6 +134,7 @@ function App() {
             {videoInfo && (
               <ScreenshotConfig
                 videoDuration={videoInfo.duration}
+                videoFileSize={videoFile?.size}
                 onStartProcessing={handleStartProcessing}
                 isProcessing={isProcessing}
               />
@@ -134,12 +156,6 @@ function App() {
                 onClear={handleClearScreenshots}
               />
             )}
-
-            <div className="app-actions">
-              <button onClick={handleReset} className="btn-reset">
-                Cargar Otro Video
-              </button>
-            </div>
           </>
         )}
       </main>
