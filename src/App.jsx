@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useFFmpeg } from './hooks/useFFmpeg';
+import { isVideoFrameSupported } from './utils/videoFrameExtractor';
 import VideoUploader from './components/VideoUploader/VideoUploaderSimple';
 import VideoPlayer from './components/VideoPlayer/VideoPlayer';
 import ScreenshotConfig from './components/ScreenshotConfig/ScreenshotConfig';
@@ -10,7 +10,6 @@ import { cleanupUrls } from './utils/downloadHelpers';
 import './App.css';
 
 function App() {
-  const { ffmpeg, loaded, loading, error: ffmpegError } = useFFmpeg();
   const [videoFile, setVideoFile] = useState(null);
   const [videoInfo, setVideoInfo] = useState(null);
   const [screenshots, setScreenshots] = useState([]);
@@ -19,7 +18,8 @@ function App() {
   const [processingConfig, setProcessingConfig] = useState({});
   const processingEngineRef = useRef(null);
 
-  console.log('App state:', { loaded, loading, ffmpegError, disabled: !loaded || loading });
+  const isSupported = isVideoFrameSupported();
+  console.log('[App] VideoFrame API supported:', isSupported);
 
   const handleVideoUpload = (file) => {
     console.log('handleVideoUpload called with:', file);
@@ -77,21 +77,15 @@ function App() {
         <h1>Analizador de Videos</h1>
         <p className="subtitle">Extrae capturas de pantalla de tus videos localmente</p>
 
-        {loading && (
-          <div className="ffmpeg-status loading">
-            Cargando FFmpeg...
-          </div>
-        )}
-
-        {ffmpegError && (
+        {!isSupported && (
           <div className="ffmpeg-status error">
-            Error cargando FFmpeg: {ffmpegError}
+            Tu navegador no soporta VideoFrame API. Usa Chrome 94+, Safari 16.4+, o Firefox 116+
           </div>
         )}
 
-        {loaded && !loading && (
+        {isSupported && (
           <div className="ffmpeg-status success">
-            FFmpeg listo
+            ✓ Navegador compatible
           </div>
         )}
       </header>
@@ -107,7 +101,7 @@ function App() {
         {!videoFile ? (
           <VideoUploader
             onVideoUpload={handleVideoUpload}
-            disabled={!loaded || loading}
+            disabled={!isSupported}
           />
         ) : (
           <>
@@ -127,7 +121,6 @@ function App() {
             {videoInfo && (
               <ProcessingEngine
                 ref={processingEngineRef}
-                ffmpeg={ffmpeg}
                 videoFile={videoFile}
                 config={processingConfig}
                 onComplete={handleProcessingComplete}

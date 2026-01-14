@@ -1,30 +1,36 @@
 import { useState, useImperativeHandle, forwardRef } from 'react';
-import { extractFrames } from '../../utils/ffmpegHelpers';
+import { extractFrames } from '../../utils/videoFrameExtractor';
+import { trackError } from '../../utils/errorTracking';
 import './ProcessingEngine.css';
 
-const ProcessingEngine = forwardRef(({ ffmpeg, videoFile, config, onComplete, onError }, ref) => {
+const ProcessingEngine = forwardRef(({ videoFile, config, onComplete, onError }, ref) => {
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState('');
 
   const startProcessing = async () => {
-    if (!ffmpeg || !videoFile) {
-      onError?.('FFmpeg no está cargado o no hay video');
+    if (!videoFile) {
+      onError?.('No hay video cargado');
       return;
     }
 
     setProcessing(true);
     setProgress(0);
-    setCurrentStep('Iniciando procesamiento...');
+    setCurrentStep('Iniciando extracción de frames...');
 
     try {
       setCurrentStep('Extrayendo frames del video...');
-      setProgress(20);
 
-      const screenshots = await extractFrames(ffmpeg, videoFile, config);
+      const screenshots = await extractFrames(
+        videoFile,
+        config,
+        (progressValue) => {
+          setProgress(progressValue);
+        }
+      );
 
       setProgress(100);
-      setCurrentStep('¡Procesamiento completado!');
+      setCurrentStep('¡Extracción completada!');
 
       setTimeout(() => {
         onComplete?.(screenshots);
@@ -32,7 +38,14 @@ const ProcessingEngine = forwardRef(({ ffmpeg, videoFile, config, onComplete, on
       }, 500);
 
     } catch (error) {
-      console.error('Error during processing:', error);
+      console.error('[ProcessingEngine] Error:', error);
+
+      trackError('ProcessingEngine', 'extractFrames', error, {
+        videoFileName: videoFile.name,
+        videoSize: videoFile.size,
+        config
+      });
+
       setCurrentStep('Error durante el procesamiento');
       onError?.(error.message);
       setProcessing(false);
