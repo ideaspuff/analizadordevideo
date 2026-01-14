@@ -36,21 +36,17 @@ export const useFFmpeg = () => {
 
       console.log('[FFmpeg] Cargando archivos desde:', baseURL);
 
-      // Cargar desde archivos locales
+      // Cargar versión single-thread (sin worker) para mayor compatibilidad
       const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
       console.log('[FFmpeg] ffmpeg-core.js cargado');
 
       const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
       console.log('[FFmpeg] ffmpeg-core.wasm cargado');
 
-      const workerURL = await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript');
-      console.log('[FFmpeg] ffmpeg-core.worker.js cargado');
-
-      console.log('[FFmpeg] Inicializando FFmpeg...');
+      console.log('[FFmpeg] Inicializando FFmpeg (single-thread mode)...');
       await ffmpeg.load({
         coreURL,
-        wasmURL,
-        workerURL
+        wasmURL
       });
 
       console.log('[FFmpeg] ✓ FFmpeg cargado exitosamente');
