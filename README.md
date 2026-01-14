@@ -1,20 +1,21 @@
 # Analizador de Videos
 
-Aplicación web para extraer capturas de pantalla de videos localmente usando FFmpeg.wasm. Todo el procesamiento se realiza en tu navegador, sin enviar datos a ningún servidor.
+Aplicación web para extraer capturas de pantalla de videos localmente usando la **VideoFrame API nativa del navegador**. Todo el procesamiento se realiza en tu navegador, sin enviar datos a ningún servidor.
 
 ## Características
 
 - **Drag & Drop**: Arrastra y suelta videos fácilmente
 - **100% Local**: Sin servidores, tus videos nunca salen de tu navegador
-- **Procesamiento FFmpeg**: Utiliza FFmpeg.wasm para extracción de frames
+- **Procesamiento Nativo**: Utiliza VideoFrame API del navegador (sin dependencias externas)
 - **Configuración Flexible**:
   - Intervalo entre capturas configurable
   - Múltiples formatos (PNG, JPG)
-  - Escalado de resolución
+  - Control de calidad de imagen
   - Selección de rango temporal
 - **Descarga Fácil**: Descarga capturas individuales o todas en ZIP
 - **Interfaz Moderna**: UI responsiva y amigable
 - **Sistema de Error Tracking**: Dashboard de errores con blame automático para debugging
+- **Sin Dependencias Pesadas**: No requiere FFmpeg.wasm (reducción de ~32MB)
 
 ## Formatos de Video Soportados
 
@@ -63,22 +64,21 @@ npm run dev
 
 - **React 18**: Framework UI
 - **Vite**: Build tool y dev server
-- **FFmpeg.wasm**: Procesamiento de video en el navegador
+- **VideoFrame API**: Procesamiento nativo de video en el navegador
 - **react-dropzone**: Drag & drop de archivos
 - **JSZip**: Creación de archivos ZIP
 - **file-saver**: Descarga de archivos
 
 ## Requisitos del Navegador
 
-Necesitas un navegador moderno con soporte para:
-- WebAssembly (WASM)
-- SharedArrayBuffer
-- Cross-Origin Isolation
+Necesitas un navegador moderno con soporte para **VideoFrame API**:
 
 Navegadores compatibles:
-- Chrome/Edge 92+
-- Firefox 89+
-- Safari 15.2+
+- ✅ Chrome/Edge 94+
+- ✅ Safari 16.4+
+- ✅ Firefox 116+
+
+**Nota:** No requiere headers CORS especiales ni SharedArrayBuffer
 
 ## Comandos Disponibles
 
@@ -121,15 +121,16 @@ La aplicación incluye un sistema avanzado de tracking de errores:
 - **Exportación de Logs**: Exporta todos los errores en formato JSON para análisis
 - **Metadata Completa**: Información del navegador, contexto de seguridad, y stack traces
 
-Para diagnosticar problemas con FFmpeg.wasm:
-1. Abre `http://localhost:5173/diagnostic.html`
-2. Verifica que todos los tests pasen (especialmente Cross-Origin Isolation)
+Si la aplicación no funciona:
+1. Verifica que tu navegador sea compatible (Chrome 94+, Safari 16.4+, Firefox 116+)
+2. Abre la consola del navegador (F12) para ver logs detallados
+3. Verifica el Error Dashboard si aparece en la esquina inferior derecha
 
 ## Limitaciones
 
+- Requiere navegador moderno con VideoFrame API (Chrome 94+, Safari 16.4+, Firefox 116+)
 - Videos muy grandes pueden consumir mucha memoria RAM
-- El rendimiento es menor comparado con FFmpeg nativo
-- Requiere navegadores con soporte para WebAssembly
+- Solo extracción de frames (no conversión de formatos de video)
 
 ## Optimizaciones Futuras
 
