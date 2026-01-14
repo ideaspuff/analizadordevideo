@@ -7,7 +7,13 @@ const ScreenshotConfig = ({ videoDuration, videoFileSize, onStartProcessing, isP
     format: 'png',
     quality: 0.92,
     startTime: 0,
-    endTime: videoDuration || 0
+    endTime: videoDuration || 0,
+    // Opciones de análisis inteligente
+    useSmartAnalysis: false,
+    detectScenes: false,
+    skipSimilar: false,
+    sceneThreshold: 0.3,
+    similarityThreshold: 0.05
   });
 
   const handleChange = (field, value) => {
@@ -22,16 +28,21 @@ const ScreenshotConfig = ({ videoDuration, videoFileSize, onStartProcessing, isP
       format: config.format,
       quality: parseFloat(config.quality),
       startTime: parseFloat(config.startTime),
-      endTime: parseFloat(config.endTime) || videoDuration
+      endTime: parseFloat(config.endTime) || videoDuration,
+      // Análisis inteligente
+      useSmartAnalysis: config.useSmartAnalysis,
+      detectScenes: config.detectScenes,
+      skipSimilar: config.skipSimilar,
+      sceneThreshold: parseFloat(config.sceneThreshold),
+      similarityThreshold: parseFloat(config.similarityThreshold)
     };
 
     onStartProcessing(processConfig);
   };
 
-  const estimatedFrames = Math.max(
-    1,
-    Math.floor((config.endTime - config.startTime) / config.interval)
-  );
+  const estimatedFrames = config.useSmartAnalysis
+    ? '?'
+    : Math.max(1, Math.floor((config.endTime - config.startTime) / config.interval));
 
   const formatFileSize = (bytes) => {
     if (!bytes) return '0 B';
@@ -168,11 +179,116 @@ const ScreenshotConfig = ({ videoDuration, videoFileSize, onStartProcessing, isP
           </div>
         </div>
 
+        {/* Sección Análisis Inteligente */}
+        <div className="config-section">
+          <h3 className="section-title">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 2L9.5 5.5L13 6L10 9L11 13L8 11L5 13L6 9L3 6L6.5 5.5L8 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Análisis Inteligente
+          </h3>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="useSmartAnalysis" style={{ flexDirection: 'row', gap: '0.75rem', alignItems: 'center' }}>
+                <input
+                  id="useSmartAnalysis"
+                  type="checkbox"
+                  checked={config.useSmartAnalysis}
+                  onChange={(e) => handleChange('useSmartAnalysis', e.target.checked)}
+                  disabled={isProcessing}
+                  style={{ width: 'auto', margin: 0 }}
+                />
+                <span>Activar análisis inteligente</span>
+              </label>
+              <span className="label-hint">Detecta automáticamente momentos importantes del video</span>
+            </div>
+          </div>
+
+          {config.useSmartAnalysis && (
+            <>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="detectScenes" style={{ flexDirection: 'row', gap: '0.75rem', alignItems: 'center' }}>
+                    <input
+                      id="detectScenes"
+                      type="checkbox"
+                      checked={config.detectScenes}
+                      onChange={(e) => handleChange('detectScenes', e.target.checked)}
+                      disabled={isProcessing}
+                      style={{ width: 'auto', margin: 0 }}
+                    />
+                    <span>Detectar cambios de escena</span>
+                  </label>
+                  <span className="label-hint">Captura frames cuando hay cambios significativos</span>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="skipSimilar" style={{ flexDirection: 'row', gap: '0.75rem', alignItems: 'center' }}>
+                    <input
+                      id="skipSimilar"
+                      type="checkbox"
+                      checked={config.skipSimilar}
+                      onChange={(e) => handleChange('skipSimilar', e.target.checked)}
+                      disabled={isProcessing}
+                      style={{ width: 'auto', margin: 0 }}
+                    />
+                    <span>Omitir frames similares</span>
+                  </label>
+                  <span className="label-hint">Evita capturas duplicadas o muy parecidas</span>
+                </div>
+              </div>
+
+              <div className="form-row">
+                {config.detectScenes && (
+                  <div className="form-group">
+                    <label htmlFor="sceneThreshold">
+                      Sensibilidad de escenas
+                      <span className="label-hint">0.1 (muy sensible) - 0.5 (poco sensible)</span>
+                    </label>
+                    <input
+                      id="sceneThreshold"
+                      type="number"
+                      min="0.1"
+                      max="0.5"
+                      step="0.05"
+                      value={config.sceneThreshold}
+                      onChange={(e) => handleChange('sceneThreshold', e.target.value)}
+                      disabled={isProcessing}
+                    />
+                  </div>
+                )}
+
+                {config.skipSimilar && (
+                  <div className="form-group">
+                    <label htmlFor="similarityThreshold">
+                      Umbral de similitud
+                      <span className="label-hint">0.01 (estricto) - 0.1 (permisivo)</span>
+                    </label>
+                    <input
+                      id="similarityThreshold"
+                      type="number"
+                      min="0.01"
+                      max="0.1"
+                      step="0.01"
+                      value={config.similarityThreshold}
+                      onChange={(e) => handleChange('similarityThreshold', e.target.value)}
+                      disabled={isProcessing}
+                    />
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
         {/* Resumen */}
         <div className="config-summary">
           <div className="summary-item">
             <span className="summary-label">Capturas estimadas:</span>
-            <span className="summary-value">{estimatedFrames}</span>
+            <span className="summary-value">
+              {config.useSmartAnalysis ? '~' + estimatedFrames : estimatedFrames}
+            </span>
           </div>
           <div className="summary-item">
             <span className="summary-label">Duración a procesar:</span>
@@ -180,6 +296,14 @@ const ScreenshotConfig = ({ videoDuration, videoFileSize, onStartProcessing, isP
               {((config.endTime || videoDuration) - config.startTime).toFixed(1)}s
             </span>
           </div>
+          {config.useSmartAnalysis && (
+            <div className="summary-item">
+              <span className="summary-label">Modo:</span>
+              <span className="summary-value" style={{ fontSize: '1rem' }}>
+                🎯 Inteligente
+              </span>
+            </div>
+          )}
         </div>
 
         <button

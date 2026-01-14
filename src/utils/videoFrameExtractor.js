@@ -3,6 +3,8 @@
  * Compatible con Chrome 94+, Safari 16.4+, Firefox 116+
  */
 
+import { detectInterestingFrames, areSimilarFrames } from './videoAnalyzer';
+
 /**
  * Verifica si el navegador soporta VideoFrame API
  */
@@ -92,7 +94,12 @@ export const extractFrames = async (videoFile, config = {}, onProgress = null) =
     format = 'png',
     quality = 0.92,
     startTime = 0,
-    endTime = 0
+    endTime = 0,
+    useSmartAnalysis = false,
+    detectScenes = false,
+    skipSimilar = false,
+    sceneThreshold = 0.3,
+    similarityThreshold = 0.05
   } = config;
 
   console.log('[VideoFrameExtractor] Iniciando extracción de frames');
@@ -108,9 +115,26 @@ export const extractFrames = async (videoFile, config = {}, onProgress = null) =
   console.log('[VideoFrameExtractor] Rango:', startTime, '-', finalEndTime);
 
   // Calcular timestamps
-  const timestamps = [];
-  for (let time = startTime; time < finalEndTime; time += interval) {
-    timestamps.push(time);
+  let timestamps = [];
+
+  if (useSmartAnalysis && detectScenes) {
+    // Usar detección inteligente de escenas
+    console.log('[VideoFrameExtractor] Usando análisis inteligente de escenas...');
+    timestamps = await detectInterestingFrames(video, {
+      minInterval: interval,
+      sceneChangeThreshold: sceneThreshold,
+      movementThreshold: sceneThreshold * 0.5, // Movimiento más sensible
+      sampleWidth: 160,
+      sampleHeight: 90
+    });
+
+    // Filtrar por rango de tiempo
+    timestamps = timestamps.filter(t => t >= startTime && t <= finalEndTime);
+  } else {
+    // Modo normal: intervalos fijos
+    for (let time = startTime; time < finalEndTime; time += interval) {
+      timestamps.push(time);
+    }
   }
 
   // Asegurar que siempre hay al menos un frame
@@ -122,6 +146,7 @@ export const extractFrames = async (videoFile, config = {}, onProgress = null) =
 
   const screenshots = [];
   const mimeType = format === 'jpg' ? 'image/jpeg' : 'image/png';
+  let lastCanvas = null;
 
   // Extraer frames
   for (let i = 0; i < timestamps.length; i++) {
@@ -130,37 +155,45 @@ export const extractFrames = async (videoFile, config = {}, onProgress = null) =
     try {
       console.log(`[VideoFrameExtractor] Extrayendo frame ${i + 1}/${timestamps.length} en t=${time.toFixed(2)}s`);
 
-      // Para JPG, usar calidad especificada
-      let blob;
-      if (format === 'jpg') {
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+      // Crear canvas del frame actual
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
 
-        video.currentTime = time;
-        await new Promise(resolve => {
-          video.onseeked = resolve;
-        });
+      video.currentTime = time;
+      await new Promise(resolve => {
+        video.onseeked = resolve;
+      });
 
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        blob = await new Promise(resolve => {
-          canvas.toBlob(resolve, mimeType, quality);
-        });
-      } else {
-        blob = await extractFrameAtTime(video, time);
+      // Verificar si es similar al anterior (si skip similar está activado)
+      if (useSmartAnalysis && skipSimilar && lastCanvas) {
+        const isSimilar = areSimilarFrames(lastCanvas, canvas, similarityThreshold);
+        if (isSimilar) {
+          console.log(`[VideoFrameExtractor] Skipping similar frame at t=${time.toFixed(2)}s`);
+          continue; // Saltar este frame
+        }
       }
 
+      // Guardar canvas actual para próxima comparación
+      lastCanvas = canvas;
+
+      // Convertir canvas a blob
+      const blob = await new Promise(resolve => {
+        canvas.toBlob(resolve, mimeType, format === 'jpg' ? quality : undefined);
+      });
+
       const url = URL.createObjectURL(blob);
-      const fileName = `screenshot_${String(i + 1).padStart(4, '0')}_t${time.toFixed(2)}s.${format}`;
+      const fileName = `screenshot_${String(screenshots.length + 1).padStart(4, '0')}_t${time.toFixed(2)}s.${format}`;
 
       screenshots.push({
         url,
         blob,
         fileName,
         timestamp: time,
-        index: i,
+        index: screenshots.length,
         width: video.videoWidth,
         height: video.videoHeight
       });
